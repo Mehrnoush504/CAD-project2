@@ -12,72 +12,90 @@ end singleBRAMpartB;
 
 architecture Behavioral of singleBRAMpartB is
 ----------------------------------------------
-type ram_type is array (9 downto 0)   --1023
+type ram_type is array (0 to 9)   --1023
         of std_logic_vector (7 downto 0);   
 signal myRAM : ram_type :=("00000000","00000001","00000010","00000011","00000100",
 "00000101","00000110","00000111","00001000","00001001");
 ----------------------------------------------
-type state is (idle,active,final);
-signal presentState : state := idle;
+type state is (idle,readData,writeData,sumData);
+signal presentState,nextState : state := idle;
 ----------------------------------------------
+type arr is array (1 downto 0)   
+        of STD_LOGIC_VECTOR (7 downto 0); 
+
 signal addr: STD_LOGIC_VECTOR (9 downto 0):= address;
-signal sumSig:  STD_LOGIC_VECTOR (23 downto 0):=std_logic_vector(to_unsigned(0,24));
 signal wena: STD_LOGIC := wrEna;
+signal sumSig: STD_LOGIC_VECTOR (23 downto 0);
 ----------------------------------------------
 begin
 	
 	process(clk)
+	variable temp: STD_LOGIC_VECTOR (7 downto 0);
+	variable i:integer :=-8;
 	variable a:integer :=0;
-	variable i: integer :=-8;
-	variable sum : integer :=0;
+	variable sum:integer :=0;
+	variable cnt:integer :=-1;
+	variable count: integer :=-1;
 	begin
 		if(clk' event and clk='1') then
+			addr<=address;
 			case presentState is
-				when idle =>
-					sum := 0;
-					addr<="0000000000";
-					presentState<=active;
-				when active =>
-					a := to_integer(unsigned(addr));
-					
+			when idle =>
+				case check is
+					when 0 =>
+						presentState <= writeData;
+					when 1 =>
+						presentState <= readData;
+					when 2 =>
+						a := 0;
+						presentState <= sumData;
+					when 3 =>--show all data in ram
+						cnt := cnt + 1;
+						addr <= std_logic_vector(to_unsigned(cnt,10));
+						if(cnt >= 10)then--1024
+							NULL;
+						else
+							presentState <= readData;
+						end if;
+					when others =>
+						presentState <= idle;
+						
+				end case;
+			when readData =>
+				a := to_integer(unsigned(addr));
+				rdData <= myram(a);
+				presentState <= idle;
+			when writeData =>
+				a := to_integer(unsigned(addr));
+				myram(a) <= wrData;
+				presentState <= idle;
+			when sumData =>
+					a := a+1;
 					if(wEna = '1')then
 						i:= i+8;
 						myram(a)<= sumSig(7+i downto i);
-						addr<=std_logic_vector(to_unsigned(a+1,10));
 						
 						if(i=16)then
 							wEna <= '0';
+							cnt :=-1;
 							i := -8;
 							addr<=std_logic_vector(to_unsigned(0,10));
-							presentState<= final;
+							check<=3;
+							presentState<= idle;
 						end if;
 						
 					else
 						sum := sum + to_integer(unsigned(myram(a)));
-						addr<=std_logic_vector(to_unsigned(a+1,10));
 						if(a=9)then
-							addr<="0000000000";
+							a:=-1;
 							wena<='1';
-							presentState<=active;
+							presentState<=sumData;
 							sumSig<= std_logic_vector(to_unsigned(sum,24));
 						end if;
 					end if;
 					
-				when final =>
-					a := to_integer(unsigned(addr));
-					if(a<2)then
-						rdData<=myram(a);
-						addr<=std_logic_vector(to_unsigned(a+1,10));
-						presentState <= final;
-					else
-						presentState <= idle;
-					end if;
-					
-				when others=>
-					presentState<=idle;
 			end case;
 		end if;
 	end process;
 
 end Behavioral;
-

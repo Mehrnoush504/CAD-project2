@@ -5,9 +5,10 @@ use IEEE.NUMERIC_STD.ALL;
 entity singleBRAMpartB is
     Port ( clk : in  STD_LOGIC;
            wrEna : in  STD_LOGIC;
-           address : in  STD_LOGIC_VECTOR (9 downto 0);
+           address : in  STD_LOGIC_VECTOR (9 downto 0):="0000000000";
            wrData : in  STD_LOGIC_VECTOR (7 downto 0);
-           rdData : out  STD_LOGIC_VECTOR (7 downto 0));
+           rdData : out  STD_LOGIC_VECTOR (7 downto 0);
+	   check : inout integer :=2);
 end singleBRAMpartB;
 
 architecture Behavioral of singleBRAMpartB is
